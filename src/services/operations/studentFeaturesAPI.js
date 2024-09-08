@@ -25,62 +25,66 @@ function loadScript(src) {
 
 
 export async function buyCourse(token, courses, userDetails, navigate, dispatch) {
+    console.log("userdetails", userDetails);
+    console.log("courses", courses);
+    console.log("token", token);
     const toastId = toast.loading("Loading...");
-    try{
-        //load the script
+
+    try {
         const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
 
-        if(!res) {
+        if (!res) {
             toast.error("RazorPay SDK failed to load");
             return;
         }
 
-        //initiate the order
         const orderResponse = await apiConnector("POST", COURSE_PAYMENT_API, 
-                                {courses},
-                                {
-                                    Authorization: `Bearer ${token}`,
-                                })
+                                 { courses }, 
+                                 { Authorization: `Bearer ${token}` });
 
-        if(!orderResponse.data.success) {
-            throw new Error(orderResponse.data.message);
+        console.log("Full orderResponse:", orderResponse);
+
+        // Adjust the destructuring based on the actual structure
+        const { currency, amount, id } = orderResponse.data?.data || {};
+
+        if (!currency || !amount || !id) {
+            throw new Error("Payment initiation data is missing or incorrect.");
         }
-        console.log("PRINTING orderResponse", orderResponse);
-        //options
+
         const options = {
             key: process.env.RAZORPAY_KEY,
-            currency: orderResponse.data.message.currency,
-            amount: `${orderResponse.data.message.amount}`,
-            order_id:orderResponse.data.message.id,
-            name:"StudyNotion",
+            currency: currency,
+            amount: `${amount}`,
+            order_id: id,
+            name: "StudyNotion",
             description: "Thank You for Purchasing the Course",
-            image:rzpLogo,
+            image: rzpLogo,
             prefill: {
-                name:`${userDetails.firstName}`,
-                email:userDetails.email
+                name: `${userDetails.firstName}`,
+                email: userDetails.email,
             },
             handler: function(response) {
-                //send successful wala mail
-                sendPaymentSuccessEmail(response, orderResponse.data.message.amount,token );
-                //verifyPayment
-                verifyPayment({...response, courses}, token, navigate, dispatch);
-            }
-        }
-        //miss hogya tha 
+                sendPaymentSuccessEmail(response, amount, token);
+                verifyPayment({ ...response, courses }, token, navigate, dispatch);
+            },
+        };
+
         const paymentObject = new window.Razorpay(options);
         paymentObject.open();
         paymentObject.on("payment.failed", function(response) {
-            toast.error("oops, payment failed");
+            toast.error("Oops, payment failed");
             console.log(response.error);
-        })
+        });
 
-    }
-    catch(error) {
+    } catch (error) {
         console.log("PAYMENT API ERROR.....", error);
         toast.error("Could not make Payment");
+    } finally {
+        toast.dismiss(toastId);
     }
-    toast.dismiss(toastId);
 }
+
+
 
 async function sendPaymentSuccessEmail(response, amount, token) {
     try{

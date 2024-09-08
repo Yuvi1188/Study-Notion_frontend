@@ -65,7 +65,7 @@ export async function getUserEnrolledCourses(token) {
   return result
 }
 
-export async function getInstructorData(token) {
+export async function getInstructorData(userID,token) {
   const toastId = toast.loading("Loading...");
   let result = [];
   try{

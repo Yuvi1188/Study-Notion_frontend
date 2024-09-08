@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { fetchInstructorCourses } from '../../../../services/operations/courseDetailsAPI';
 import { getInstructorData } from '../../../../services/operations/profileAPI';
@@ -6,35 +6,51 @@ import InstructorChart from './InstructorChart';
 import { Link } from 'react-router-dom';
 
 export default function Instructor() {
-    const { token } = useSelector((state) => state.auth)
-    const { user } = useSelector((state) => state.profile)
-    const [loading, setLoading] = useState(false)
-    const [instructorData, setInstructorData] = useState(null)
-    const [courses, setCourses] = useState([])
+    const { token } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.profile);
+    const [loading, setLoading] = useState(true);
+    const [instructorData, setInstructorData] = useState([]);
+    const [courses, setCourses] = useState([]);
   
     useEffect(() => {
-      ;(async () => {
-        setLoading(true)
-        const instructorApiData = await getInstructorData(token)
-        const result = await fetchInstructorCourses(token)
-        console.log(instructorApiData)
-        if (instructorApiData.length) setInstructorData(instructorApiData)
-        if (result) {
-          setCourses(result)
+      (async () => {
+        try {
+          setLoading(true);
+          
+          // Fetch instructor data
+          const instructorApiData = await getInstructorData(token);
+          console.log("Instructor Data:", instructorApiData);
+          
+          // Fetch courses data
+          const result = await fetchInstructorCourses(token);
+          console.log("Courses Data:", result);
+          
+          // Update state based on the API response
+          if (Array.isArray(instructorApiData) && instructorApiData.length > 0) {
+            setInstructorData(instructorApiData);
+          }
+          if (Array.isArray(result)) {
+            setCourses(result);
+          }
+          
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false)
-      })()
-    }, [])
+      })();
+    }, [token]);
   
-    const totalAmount = instructorData?.reduce(
+    // Calculate total amount and students
+    const totalAmount = instructorData.reduce(
       (acc, curr) => acc + curr.totalAmountGenerated,
       0
-    )
+    );
   
-    const totalStudents = instructorData?.reduce(
+    const totalStudents = instructorData.reduce(
       (acc, curr) => acc + curr.totalStudentsEnrolled,
       0
-    )
+    );
   
     return (
       <div>
@@ -137,5 +153,5 @@ export default function Instructor() {
           </div>
         )}
       </div>
-    )
-  }
+    );
+}
